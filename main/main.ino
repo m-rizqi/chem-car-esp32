@@ -24,8 +24,12 @@ cppQueue temperature_queue(float_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
+const char* ssid = "OPPO Reno5";
+const char* password = "v3qu6m3u";
 
 #include <NTPClient.h>
+WiFiUDP ntpUDP;
+
 #include <time.h>
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
@@ -37,15 +41,33 @@ struct Time {
     String hour_string = (this->hour < 10 ? "0" : "") + String(this->hour, DEC);
     String minute_string = (this->minute < 10 ? "0" : "") + String(this->minute, DEC); 
     String second_string = (this->second < 10 ? "0" : "") + String(this->second, DEC); 
-    String time_string = hour_string + ":" + minute_string; 
+    String time_string = hour_string + ":" + minute_string + ":" + second_string; 
   }
 } t_time;
 size_t time_size = sizeof(t_time);
+NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
 
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
 void setup() {
   Serial.begin(115200);
+
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password, 6);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  time_client.begin();  
+  setenv("TZ", "Asia/Jakarta", 1);
+  tzset();
+
   dht.begin();
 }
 
@@ -61,7 +83,24 @@ void loop() {
 }
 
 void readAndSaveTime(){
-
+  time_client.update();
+  time_t raw_time = time_client.getEpochTime();
+  struct tm *time_info;
+  time_info = localtime(&raw_time);
+  char buffer[80];
+  strftime(buffer, sizeof(buffer), "%e %B %Y %H:%M:%S", time_info);
+  String date_and_time = String(buffer);
+  String date_string = date_and_time.substring(0,date_and_time.length() - 9);
+  String time_string = date_and_time.substring(date_and_time.length() - 8, date_and_time.length());
+  int hour = atoi(time_string.substring(0,2).c_str());
+  int minute = atoi(time_string.substring(3,5).c_str());
+  int second = atoi(time_string.substring(6,8).c_str());
+  Time t = Time{hour, minute, second};
+  if(time_queue.isFull()){
+    Time temp;
+    time_queue.pop(&temp);
+  }
+  time_queue.push(&t_time);
 }
 
 void readAndSavePotentiometer(){
@@ -92,12 +131,21 @@ void readAndSaveTemperature(){
 }
 
 void printLog(){
-  int temp;
+  Time time_temp;
+  Serial.print("Time: [");
+  for(int i = 0; i < time_queue.getCount(); i++){
+    time_queue.peekIdx(&time_temp, i);
+    Serial.print(time_temp.getFormattedTime());
+    Serial.print(",");
+  }
+  Serial.println("]");
+  
+  int int_temp;
 
   Serial.print("Potentiometer: [");
   for(int i = 0; i < potentiometer_queue.getCount(); i++){
-    potentiometer_queue.peekIdx(&temp, i);
-    Serial.print(temp);
+    potentiometer_queue.peekIdx(&int_temp, i);
+    Serial.print(int_temp);
     Serial.print(",");
   }
   Serial.println("]");
