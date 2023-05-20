@@ -34,13 +34,13 @@ struct Time {
   int minute;
   int second;
   String getFormattedTime(){
-    String hour_string = (this.hour < 10 ? "0" : "") + String(this.hour, DEC);
-    String minute_string = (this.minute < 10 ? "0" : "") + String(this.minute, DEC); 
-    String second_string = (this.second < 10 ? "0" : "") + String(this.second, DEC); 
+    String hour_string = (this->hour < 10 ? "0" : "") + String(this->hour, DEC);
+    String minute_string = (this->minute < 10 ? "0" : "") + String(this->minute, DEC); 
+    String second_string = (this->second < 10 ? "0" : "") + String(this->second, DEC); 
     String time_string = hour_string + ":" + minute_string; 
   }
 } t_time;
-size_t time_size = sizeoft(t_time);
+size_t time_size = sizeof(t_time);
 
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
