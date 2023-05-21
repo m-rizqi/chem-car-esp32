@@ -1,3 +1,10 @@
+#include <WiFi.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <time.h>
+WiFiUDP ntpUDP;
+NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
+
 #include <cppQueue.h>
 #define	QUEUE_IMPLEMENTATION	FIFO
 #define ARRAY_MAX_VALUES 5
@@ -22,15 +29,9 @@ cppQueue temperature_queue(float_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 #define ANGLE_MIN 0
 #define ANGLE_MAX 360
 
-#include <WiFi.h>
-#include <WiFiUdp.h>
 const char* ssid = "OPPO Reno5";
 const char* password = "v3qu6m3u";
 
-#include <NTPClient.h>
-WiFiUDP ntpUDP;
-
-#include <time.h>
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
 struct Time {
@@ -45,7 +46,6 @@ struct Time {
   }
 } t_time;
 size_t time_size = sizeof(t_time);
-NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
 
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
@@ -54,7 +54,7 @@ void setup() {
 
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  WiFi.begin(ssid, password, 6);
+  WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
