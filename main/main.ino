@@ -4,18 +4,23 @@
 #include <time.h>
 #include <cppQueue.h>
 #include "DHT.h"
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
 const char* ssid = "OPPO Reno5";
 const char* password = "v3qu6m3u";
 WiFiUDP ntpUDP;
 NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
 
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
 #define	QUEUE_IMPLEMENTATION	FIFO
 #define ARRAY_MAX_VALUES 5
 size_t int_size = sizeof(int);
 size_t float_size = sizeof(float);
 
-#define POTENTIOMETER_PIN 15
+#define POTENTIOMETER_PIN 34
 #define POTENTIOMETER_MIN 0
 #define POTENTIOMETER_MAX 4095
 cppQueue potentiometer_queue(int_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
@@ -47,8 +52,47 @@ struct Time {
   }
 };
 size_t time_size = sizeof(Time);
-
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
+
+const char index_html[] PROGMEM = R"rawliteral(
+  <!DOCTYPE HTML><html>
+<head>
+  <title>ESP Web Server</title>
+</head>
+<body>
+  <h1>WebSocket</h1>
+<script>
+  var gateway = `ws://${window.location.hostname}/ws`;
+  var websocket;
+  window.addEventListener('load', onLoad);
+  function initWebSocket() {
+    console.log('Trying to open a WebSocket connection...');
+    websocket = new WebSocket(gateway);
+    websocket.onopen    = onOpen;
+    websocket.onclose   = onClose;
+    websocket.onmessage = onMessage; 
+  }
+  function onOpen(event) {
+    console.log('Connection opened');
+  }
+  function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+  }
+  function onMessage(event) {
+    console.log(event.data);
+  }
+  function onLoad(event) {
+    initWebSocket();
+  }
+</script>
+</body>
+</html>
+)rawliteral";
+
+String processor(const String& var){
+  return String();
+}
 
 void setup() {
   Serial.begin(115200);
@@ -69,16 +113,26 @@ void setup() {
   setenv("TZ", "Asia/Jakarta", 1);
   tzset();
 
+  initWebSocket();
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+  });
+
+  server.begin();
+
   dht.begin();
 }
 
 void loop() {
+  ws.cleanupClients();
     if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveTime();
       readAndSavePotentiometer();
       readAndSaveHumidity();
       readAndSaveTemperature();
       printLog();
+      notifyClients();
       last_time_millis = millis();
     }
 }
@@ -142,7 +196,6 @@ void printLog(){
   Serial.println("]");
   
   int int_temp;
-
   Serial.print("Potentiometer: [");
   for(int i = 0; i < potentiometer_queue.getCount(); i++){
     potentiometer_queue.peekIdx(&int_temp, i);
@@ -168,6 +221,93 @@ void printLog(){
   }
   Serial.println("]");
   Serial.println("");
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+    // if (strcmp((char*)data, "toggle") == 0) {
+    //   ledState = !ledState;
+    //   notifyClients();
+    // }
+  }
+}
+
+void notifyClients() {
+  String json = "{";
+
+  json += "\"times\":[";
+  Time time_temp;
+  for(int i = 0; i < time_queue.getCount(); i++){
+    time_queue.peekIdx(&time_temp, i);
+    json += "\"";
+    String formatted_time = time_temp.getFormattedTime();
+    json += formatted_time;
+    json += "\"";
+    if(i < time_queue.getCount() - 1){
+      json += ",";
+    }    
+  }
+  json += "]";
+
+  json += ",\"potentiometer\":[";
+  int int_temp;
+  for(int i = 0; i < potentiometer_queue.getCount(); i++){
+    potentiometer_queue.peekIdx(&int_temp, i);
+    json += int_temp;
+    if(i < potentiometer_queue.getCount() - 1){
+      json += ",";
+    }  
+  }
+  json += "]";
+
+  json += ",\"humidity\":[";
+  float float_temp;
+  for(int i = 0; i < humidity_queue.getCount(); i++){
+    humidity_queue.peekIdx(&float_temp, i);
+    json += float_temp;
+    if(i < humidity_queue.getCount() - 1){
+      json += ",";
+    }  
+  }
+  json += "]";
+
+  json += ",\"temperature\":[";
+  for(int i = 0; i < temperature_queue.getCount(); i++){
+    temperature_queue.peekIdx(&float_temp, i);
+    json += float_temp;
+    if(i < temperature_queue.getCount() - 1){
+      json += ",";
+    }  
+  }
+  json += "]";
+
+  json += "}";
+  ws.textAll(json);
 }
 
 float mapPotentiometerValue(float value, float out_min, float out_max){
