@@ -1,7 +1,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#define POTENTIOMETER_PIN 2
+#define POTENTIOMETER_PIN 15
 #define POTENTIOMETER_MIN_ANGLE 0
 #define POTENTIOMETER_MAX_ANGLE 4095
 
