@@ -2,10 +2,14 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <time.h>
+#include <cppQueue.h>
+#include "DHT.h"
+
+const char* ssid = "OPPO Reno5";
+const char* password = "v3qu6m3u";
 WiFiUDP ntpUDP;
 NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
 
-#include <cppQueue.h>
 #define	QUEUE_IMPLEMENTATION	FIFO
 #define ARRAY_MAX_VALUES 5
 size_t int_size = sizeof(int);
@@ -16,7 +20,6 @@ size_t float_size = sizeof(float);
 #define POTENTIOMETER_MAX 4095
 cppQueue potentiometer_queue(int_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
-#include "DHT.h"
 #define DHT_PIN 4
 // #define DHT_TYPE DHT11
 #define DHT_TYPE DHT22
@@ -29,9 +32,6 @@ cppQueue temperature_queue(float_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 #define ANGLE_MIN 0
 #define ANGLE_MAX 360
 
-const char* ssid = "OPPO Reno5";
-const char* password = "v3qu6m3u";
-
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
 struct Time {
@@ -43,9 +43,10 @@ struct Time {
     String minute_string = (this->minute < 10 ? "0" : "") + String(this->minute, DEC); 
     String second_string = (this->second < 10 ? "0" : "") + String(this->second, DEC); 
     String time_string = hour_string + ":" + minute_string + ":" + second_string; 
+    return time_string;
   }
-} t_time;
-size_t time_size = sizeof(t_time);
+};
+size_t time_size = sizeof(Time);
 
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
@@ -100,7 +101,7 @@ void readAndSaveTime(){
     Time temp;
     time_queue.pop(&temp);
   }
-  time_queue.push(&t_time);
+  time_queue.push(&t);
 }
 
 void readAndSavePotentiometer(){
