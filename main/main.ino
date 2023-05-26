@@ -55,38 +55,48 @@ size_t time_size = sizeof(Time);
 cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
 
 const char index_html[] PROGMEM = R"rawliteral(
-  <!DOCTYPE HTML><html>
-<head>
-  <title>ESP Web Server</title>
-</head>
-<body>
-  <h1>WebSocket</h1>
-<script>
-  var gateway = `ws://${window.location.hostname}/ws`;
-  var websocket;
-  window.addEventListener('load', onLoad);
-  function initWebSocket() {
-    console.log('Trying to open a WebSocket connection...');
-    websocket = new WebSocket(gateway);
-    websocket.onopen    = onOpen;
-    websocket.onclose   = onClose;
-    websocket.onmessage = onMessage; 
-  }
-  function onOpen(event) {
-    console.log('Connection opened');
-  }
-  function onClose(event) {
-    console.log('Connection closed');
-    setTimeout(initWebSocket, 2000);
-  }
-  function onMessage(event) {
-    console.log(event.data);
-  }
-  function onLoad(event) {
-    initWebSocket();
-  }
-</script>
-</body>
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Monitoring Sensor</title>
+    </head>
+    <body>
+        <p id="data">zzxczxczxc</p>
+        <div class="container">
+            <div class="potentiometer">
+                <canvas id="potentiometer_chart" style="width: 100%; box-sizing: border-box;"></canvas>
+            </div>
+            <div class="humidity"></div>
+            <div class="temperature"></div>
+        </div>
+        <script>
+            var gateway = `ws://${window.location.hostname}/ws`;
+            var websocket;
+            function initWebSocket() {
+                console.log('Trying to open a WebSocket connection...');
+                websocket = new WebSocket(gateway);
+                websocket.onopen    = onOpen;
+                websocket.onclose   = onClose;
+                websocket.onmessage = onMessage; 
+            }
+            function onOpen(event) {
+                console.log('Connection opened');
+            }
+            function onClose(event) {
+                console.log('Connection closed');
+                setTimeout(initWebSocket, 2000);
+            }
+            function onMessage(event) {
+                console.log(event.data);                
+            }
+            function onLoad(event) {
+                initWebSocket();
+            }
+        </script>
+    </body>
 </html>
 )rawliteral";
 
