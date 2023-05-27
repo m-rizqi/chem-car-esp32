@@ -61,6 +61,14 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h1>WebSocket</h1>
+  <h2>Time</h2>
+  <h3 id="time"></h3>
+  <h2>Potentiometer</h2>
+  <h3 id="potentio"></h3>
+  <h2>Humidity</h2>
+  <h3 id="humidity"></h3>
+  <h2>Temperature</h2>
+  <h3 id="temperature"></h3>
 <script>
   var gateway = `ws://${window.location.hostname}/ws`;
   var websocket;
@@ -81,6 +89,17 @@ const char index_html[] PROGMEM = R"rawliteral(
   }
   function onMessage(event) {
     console.log(event.data);
+    //document.getElementById('data').innerHTML = event.data;
+    const obj = JSON.parse(event.data);
+
+    const timeString = JSON.stringify(obj.times);
+    document.getElementById('time').innerHTML = timeString;
+    const potentiometerString = JSON.stringify(obj.potentiometer);
+    document.getElementById('potentio').innerHTML = potentiometerString;
+    const humidityString = JSON.stringify(obj.humidity);
+    document.getElementById('humidity').innerHTML = humidityString;   
+    const temperatureString = JSON.stringify(obj.temperature);
+    document.getElementById('temperature').innerHTML = temperatureString;     
   }
   function onLoad(event) {
     initWebSocket();
