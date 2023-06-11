@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chem-Car</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="style.css">
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script src="script.js"></script>
+</head>
+<body>
+    <nav class="navbar p-3 bg-white">
+        <div class="p-3 rounded-2 logo">
+            Chem-Car
+        </div>
+        <div class="d-flex align-items-end flex-column">
+            <div id="date">Monday, 23 January 2023</div>
+            <div id="currentTime" class="fs-3" style="font-weight: 600;">14:47 WIB</div>
+        </div>
+    </nav>
+    <div class="mt-1 main-content">
+        <div class="time bg-white rounded-3 m-2 p-3">
+            <div class="d-flex flex-row">
+                <!-- <div>lap</div> -->
+                <div style="font-weight: 600;">Time</div>
+                <img src="stopwatch.svg" alt="Stopwatch Icon" class="ms-auto">
+            </div>
+            <div class="mt-4 d-flex flex-row">
+                <!-- <div class="align-self-start">2</div> -->
+                <div id="time" class="fs-1" style="font-weight: 600;">10</div>
+            </div>
+            <div>seconds</div>
+        </div>
+        <div class="distance bg-white rounded-3 m-2 p-3">
+            <div class="d-flex flex-row">
+                <div style="font-weight: 600;">Distance</div>
+                <img src="rule.svg" alt="Rule Icon" class="ms-auto">
+            </div>
+            <div class="mt-4 d-flex flex-row">
+                <div id="distance" class="fs-1" style="font-weight: 600;">9,5</div>
+            </div>
+            <div>meter</div>
+        </div>
+        <div class="speed bg-white rounded-3 m-2 p-3">
+            <div class="d-flex flex-row">
+                <div style="font-weight: 600;">Speed</div>
+                <img src="gauge.svg" alt="Gauge Icon" class="ms-auto">
+            </div>
+            <div class="mt-4 d-flex flex-row">
+                <div id="speed" class="fs-1" style="font-weight: 600;">9,5</div>
+            </div>
+            <div>m/s</div>
+        </div>
+    </div>
+    <div class="bg-white rounded-3 m-2 p-3 row">
+        <div class="col-md-3 mt-2 mb-2">
+            <div class="d-flex flex-row" style="font-weight: 600; color:#8F8F8F">
+                <img src="potentiometer.svg" alt="Potentiometer Icon">
+                <div class="ms-1">Potentiometer</div>
+            </div>
+            <div>
+                <div class="mt-5 gauge-container">
+                    <div id="gauge">
+                        <div id="major-ticks">
+                            <span>0°</span>
+                            <span>90°</span>
+                            <span>180°</span>
+                            <span>270°</span>
+                            <span>360°</span>
+                        </div>
+                        <div id="minor-ticks">
+                            <span style="--i:1"></span>
+                            <span style="--i:2"></span>
+                            <span style="--i:3"></span>
+                            <span style="--i:4"></span>
+                            <span style="--i:5"></span>
+                            <span style="--i:6"></span>
+                            <span style="--i:7"></span>
+                            <span style="--i:8"></span>
+                            <span style="--i:9"></span>
+                            <span style="--i:10"></span>
+                            <span style="--i:11"></span>
+                            <span style="--i:12"></span>
+                            <span style="--i:13"></span>
+                            <span style="--i:14"></span>
+                            <span style="--i:15"></span>
+                            <span style="--i:16"></span>
+                            <span style="--i:17"></span>
+                            <span style="--i:18"></span>
+                            <span style="--i:19"></span>
+                            <span style="--i:20"></span>
+                        </div>
+                        <div id="minor-ticks-bottom-mask"></div>
+                        <div id="bottom-circle"></div>
+                        <svg version="1.1" baseProfile="full" width="190" height="190" xmlns="http://www.w3.org/2000/svg">
+                            <linearGradient id="gradient" x1="0" x2="1" y1="0" y2="0">
+                              <stop offset="0%" stop-color="#B9D9FF"/>
+                              <stop offset="100%" stop-color="#165DFF"/>
+                            </linearGradient>
+                            <path d="M5 95 A80 80 0 1 1 185 95 A80 80 0 1 1 5 95" stroke="url(#gradient)" fill="none" stroke-width="10"
+                              stroke-linecap="round" stroke-dasharray="360 630" transform="rotate(-25 95 95)">
+                            </path>
+                        </svg>
+                        <div id="center-circle">
+                            <span id="potentiometer">70°</span>
+                            <span id="name">Degree</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-9 container-chart">
+            <canvas id="potentiometer_chart"></canvas>
+        </div>
+    </div>
+    <div class="bg-white rounded-3 m-2 mt-3 p-3 row">
+        <div class="col-md-3 mt-2 mb-2">
+            <div class="d-flex flex-row" style="font-weight: 600; color:#8F8F8F">
+                <img src="temperature.svg" alt="Temperature Icon">
+                <div class="ms-1">Temperature</div>
+            </div>
+            <div>
+                <div class="mt-5 temperature-container">
+                    <div id="temperature">
+                        <div id="temperature-bar"></div>
+                        <div id="temperature-circle"></div>
+                    </div>
+                    <div>
+                        <div id="temperature-value" style="font-weight: 600; font-size: 3em">24°</div>
+                        <div>Celcius</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-9 container-chart">
+            <canvas id="temperature_chart"> </canvas>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3 m-2 mt-3 p-3 row">
+        <div class="col-md-3 mt-2 mb-2">
+            <div class="d-flex flex-row" style="font-weight: 600; color:#8F8F8F">
+                <img src="humidity.svg" alt="Humidity Icon">
+                <div class="ms-1">Humidity</div>
+            </div>
+            <div class="d-flex flex-column justify-content-center align-items-center">
+                <div class="d-flex flex-column justify-content-center align-items-center mt-5" id="humidity-container">
+                    <div id="canvas-container">
+                        <canvas id="humidity_doughnut" style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;"></canvas>
+                    </div>
+                    <div id="humidity-value" style="font-weight: 600; font-size: 3em; position: absolute;">24%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-9 container-chart">
+            <canvas id="humidity_chart"> </canvas>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3 m-2 mt-3 mb-4 p-3 row">
+        <div class="col-md-3 mt-2 mb-2">
+            <div class="d-flex flex-row" style="font-weight: 600; color:#8F8F8F">
+                <img src="road.svg" alt="Movement & Tilt Icon">
+                <div class="ms-1">Movement & Tilt</div>
+            </div>
+            <div class="d-flex flex-column justify-content-center align-items-center">
+                <div class="d-flex flex-column justify-content-center align-items-center mt-lg-5">
+                    <div class="mt-sm-5">
+                        <div class="mt-sm-5 steer-container">
+                            <img src="dash-line.svg" alt="Dash Line">
+                            <img id="steer" src="steer.svg" style="margin-top:-12px;" alt="Steer">
+                        </div>
+                    </div>
+                    <div class="mt-3 mb-3">
+                        <div id="tilt-value" style="font-weight: 600; font-size: 3em; text-align:center">24°</div>
+                        <div id="tilt-direction" style="text-align: center;">Left</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-9 container-chart d-flex align-items-center justify-content-center">
+            <div style="position: relative; width: 100%;">
+                <img src="road-large.svg" alt="Road" style="width: 100%;">
+                <img id="car" src="car.svg" alt="Car">
+                <canvas id="road-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        updateDate("Wednesday,23 May 2023");
+        updateCurrentTime("17:44");
+        updateTime(11);
+        updateDistance(8.4);
+        updateSpeed(5.3);
+        updatePotentiometer(
+            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[0, 45, 180, 135, 72, 111, 360]
+        );
+        updateTemperature(
+            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[20, 21, 19, 24, 23.5, 21, 25]
+        );
+        updateHumidity(
+            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[45, 30, 67, 85, 91, 45, 33]
+        );
+        updateTilt(0);
+        drawCarMovement(
+            [[0, 0],
+            [1, 1],
+            [2, 0],
+            [3, 1]]
+        );
+
+        var gateway = `ws://${window.location.hostname}/ws`;
+        var websocket;
+        window.addEventListener("load", onLoad);
+            function initializeWebSocket() {
+                console.log("Trying to open a WebSocket connection...");
+                websocket = new WebSocket(gateway);
+                websocket.onopen = onOpen;
+                websocket.onclose = onClose;
+                websocket.onmessage = onMessage;
+            }
+            function onOpen(event) {
+                console.log("Connection opened");
+            }
+            function onClose(event) {
+                console.log("Connection closed");
+                setTimeout(initializeWebSocket, 2000);
+            }
+            function onMessage(event) {
+                console.log(event.data);
+            }
+            function onLoad(event) {
+                initializeWebSocket();
+            }
+    </script>
+</body>
+</html>
