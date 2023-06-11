@@ -128,8 +128,10 @@ function updateHumidity(labels, data){
     });
 }
 
+
+var angle = 0;
 function updateTilt(tilt){
-    document.getElementById("steer").style.transform = "rotate("+tilt+"deg)";
+    var steer = document.getElementById("steer");
     document.getElementById("tilt-value").innerHTML = tilt + "°";
     var tiltDirection = document.getElementById("tilt-direction");
     if(tilt < 0){
@@ -142,6 +144,18 @@ function updateTilt(tilt){
     if(tilt > 0) {
         tiltDirection.innerHTML = "Right";
     }
+
+    // function rotateElement() {
+    //     angle += 1;
+    //     steer.style.transform = `rotate(${angle}deg)`;
+      
+    //     if (angle >= tilt) {
+    //       clearInterval(rotateInterval);
+    //     }
+    // }
+
+    // const rotateInterval = setInterval(rotateElement, 10);
+    steer.style.transform = `rotate(${tilt}deg)`;
 }
 
 const canvas = document.getElementById("road-canvas");

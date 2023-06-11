@@ -240,6 +240,9 @@
             }
             function onMessage(event) {
                 console.log(event.data);
+                var json = JSON.parse(event.data);
+                updateDate(json.date);
+                updateCurrentTime(json.currentTime);
             }
             function onLoad(event) {
                 initializeWebSocket();
