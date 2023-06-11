@@ -25,6 +25,16 @@ String currentTime = "";
 // Sampling
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
+#define ARRAY_MAX_VALUES 10
+
+// Potentiometer
+#define POTENTIOMETER_PIN 34
+#define POTENTIOMETER_MIN 0
+#define POTENTIOMETER_MAX 4095
+#define ANGLE_MIN 0
+#define ANGLE_MAX 360
+std::list<long> potentiometerRawValues;
+std::list<int> potentiometerAngleValues;
 
 void setup(){
   Serial.begin(115200);
@@ -51,7 +61,7 @@ void loop(){
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveDateTime();
-      // readAndSavePotentiometer();
+      readAndSavePotentiometer();
       // readAndSaveHumidity();
       // readAndSaveTemperature();
       // printLog();
@@ -73,6 +83,20 @@ void readAndSaveDateTime(){
   String time = date_and_time.substring(date_and_time.length() - 8, date_and_time.length());
   currentTime = time;
   times.push_back(new String(time));
+}
+
+void readAndSavePotentiometer(){
+  int value = analogRead(POTENTIOMETER_PIN);
+  potentiometerRawValues.push_back(value);
+  potentiometerAngleValues.push_back(mapPotentiometerValueToAngle(value));
+}
+
+float mapPotentiometerValue(float value, float out_min, float out_max){
+  return (value - POTENTIOMETER_MIN) * (out_max - out_min) / (POTENTIOMETER_MAX - POTENTIOMETER_MIN) + out_min;
+}
+
+int mapPotentiometerValueToAngle(float value){
+  return int(mapPotentiometerValue(value, ANGLE_MIN, ANGLE_MAX));
 }
 
 void beginSPIFFS() {
@@ -137,12 +161,28 @@ void notifyClients(){
   json["currentTime"] = currentTime;
 
   JSONVar timesJsonArray;
-  int i = 0;
-  for (auto it = times.begin(); it != times.end(); ++it) {
-    timesJsonArray[i] = *(*it);
-    i++;
+  int count = 0;
+  for (auto it = times.rbegin(); it != times.rend() && count < ARRAY_MAX_VALUES; ++it) {
+      timesJsonArray[count] = *(*it);
+      count++;
   }
   json["times"] = timesJsonArray;
+
+  JSONVar rawPotentiometerJsonArray;
+  count = 0;
+  for (auto it = potentiometerRawValues.rbegin(); it != potentiometerRawValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+    rawPotentiometerJsonArray[count] = *it;
+    count++;
+  }
+  json["potentiometerRawValues"] = rawPotentiometerJsonArray;
+
+  JSONVar anglePotentiometerJsonArray;
+  count = 0;
+  for (auto it = potentiometerAngleValues.rbegin(); it != potentiometerAngleValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+    anglePotentiometerJsonArray[count] = *it;
+    count++;
+  }
+  json["potentiometerAngleValues"] = anglePotentiometerJsonArray;
 
   String jsonString = JSON.stringify(json);
 

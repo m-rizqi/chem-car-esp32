@@ -243,6 +243,7 @@
                 var json = JSON.parse(event.data);
                 updateDate(json.date);
                 updateCurrentTime(json.currentTime);
+                updatePotentiometer(json.times.reverse(), json.potentiometerAngleValues.reverse());
             }
             function onLoad(event) {
                 initializeWebSocket();
