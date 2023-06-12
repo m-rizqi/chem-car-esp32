@@ -52,32 +52,32 @@
             </div>
             <div>meter</div>
         </div>
-        <div class="speed bg-white rounded-3 m-2 p-3">
+        <div class="acceleration bg-white rounded-3 m-2 p-3">
             <div class="d-flex flex-row">
-                <div style="font-weight: 600;">Speed</div>
-                <img src="gauge.svg" alt="Gauge Icon" class="ms-auto">
+                <div style="font-weight: 600;">Acceleration</div>
+                <img src="gauge-simple.svg" alt="Gauge Icon" class="ms-auto">
             </div>
             <div class="mt-4 d-flex flex-row">
-                <div id="speed" class="fs-1" style="font-weight: 600;">9,5</div>
+                <div id="acceleration" class="fs-1" style="font-weight: 600;">9,5</div>
             </div>
-            <div>m/s</div>
+            <div>m/s<sup>-2</sup></div>
         </div>
     </div>
     <div class="bg-white rounded-3 m-2 p-3 row">
         <div class="col-md-3 mt-2 mb-2">
             <div class="d-flex flex-row" style="font-weight: 600; color:#8F8F8F">
-                <img src="potentiometer.svg" alt="Potentiometer Icon">
-                <div class="ms-1">Potentiometer</div>
+                <img src="gauge.svg" alt="Speed Icon">
+                <div class="ms-1">Speed</div>
             </div>
             <div>
                 <div class="mt-5 gauge-container">
                     <div id="gauge">
                         <div id="major-ticks">
-                            <span>0°</span>
-                            <span>90°</span>
-                            <span>180°</span>
-                            <span>270°</span>
-                            <span>360°</span>
+                            <span>0</span>
+                            <span>3</span>
+                            <span>6</span>
+                            <span>9</span>
+                            <span>12</span>
                         </div>
                         <div id="minor-ticks">
                             <span style="--i:1"></span>
@@ -113,15 +113,15 @@
                             </path>
                         </svg>
                         <div id="center-circle">
-                            <span id="potentiometer">70°</span>
-                            <span id="name">Degree</span>
+                            <span id="speed">10</span>
+                            <span id="name">m/s</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-sm-9 container-chart">
-            <canvas id="potentiometer_chart"></canvas>
+            <canvas id="speed_chart"></canvas>
         </div>
     </div>
     <div class="bg-white rounded-3 m-2 mt-3 p-3 row">
@@ -199,27 +199,15 @@
     </div>
 
     <script>
-        updateDate("Wednesday,23 May 2023");
-        updateCurrentTime("17:44");
-        updateTime(11);
-        updateDistance(8.4);
-        updateSpeed(5.3);
-        updatePotentiometer(
-            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[0, 45, 180, 135, 72, 111, 360]
-        );
-        updateTemperature(
-            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[20, 21, 19, 24, 23.5, 21, 25]
-        );
-        updateHumidity(
-            ["07:00","07:15","07:30","07:45","08:00","08:15","08:30"],[45, 30, 67, 85, 91, 45, 33]
-        );
-        updateTilt(0);
-        drawCarMovement(
-            [[0, 0],
-            [1, 1],
-            [2, 0],
-            [3, 1]]
-        );
+        setDate("Wednesday,23 May 2023");
+        setCurrentTime("00:00:00");
+        setTime(0);
+        setDistance(0);
+        setAcceleration(0);
+        setSpeedChart([],[]);
+        setTemperatureChart([],[]);
+        setHumidityChart([],[]);
+        drawCarMovement([],[]);
 
         var gateway = `ws://${window.location.hostname}/ws`;
         var websocket;
@@ -241,9 +229,9 @@
             function onMessage(event) {
                 console.log(event.data);
                 var json = JSON.parse(event.data);
-                updateDate(json.date);
-                updateCurrentTime(json.currentTime);
-                updatePotentiometer(json.times.reverse(), json.potentiometerAngleValues.reverse());
+                setDate(json.date);
+                setCurrentTime(json.currentTime);
+                setSpeed(json.times.reverse(), json.speedAngleValues.reverse());
             }
             function onLoad(event) {
                 initializeWebSocket();

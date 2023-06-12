@@ -28,7 +28,7 @@ body {
   color: white;
   background-size: cover;
 }
-.speed {
+.acceleration {
   background-image: url("bg-orange.svg");
   color: white;
   background-size: cover;
@@ -149,7 +149,7 @@ svg path {
   position: absolute;
   font-size: 1em;
   color: #000;
-  top: 40px;
+  top: 110px;
 }
 #center-circle img {
   position: absolute;
@@ -157,7 +157,7 @@ svg path {
   height: 30px;
   bottom: 20px;
 }
-#potentiometer {
+#speed {
   position: absolute;
   font-size: 3em;
   color: #000;
