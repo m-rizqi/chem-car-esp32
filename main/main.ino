@@ -106,12 +106,12 @@ void initButtons() {
 }
 
 void readAndSaveSteering() {
-  if ((millis() - last_time_millis) > debounce_delay) {
+  // if ((millis() - last_time_millis) > debounce_delay) {
     if (digitalRead(LEFT_BUTTON) == LOW) steer--;
     if (digitalRead(RIGHT_BUTTON) == LOW) steer++;
     
-    last_time_millis = millis();
-  }
+  //   last_time_millis = millis();
+  // }
   steers.push_back(steer);
 }
 
