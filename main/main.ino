@@ -7,6 +7,7 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <time.h>
+#include "DHT.h"
 #include <Arduino_JSON.h>
 
 const char* ssid = "OPPO Reno5";
@@ -31,10 +32,18 @@ unsigned long last_time_millis = 0;
 #define POTENTIOMETER_PIN 34
 #define POTENTIOMETER_MIN 0
 #define POTENTIOMETER_MAX 4095
-#define ANGLE_MIN 0
-#define ANGLE_MAX 360
-std::list<long> potentiometerRawValues;
-std::list<int> potentiometerAngleValues;
+#define SPEED_MIN 0
+#define SPEED_MAX 10 // 10 m/s
+std::list<float> speeds;
+
+// DHT
+#define DHT_PIN 4
+#define DHT_TYPE DHT22
+DHT dht(DHT_PIN, DHT_TYPE);
+
+std::list<float> temperatures;
+
+std::list<float> humidities;
 
 void setup(){
   Serial.begin(115200);
@@ -61,9 +70,9 @@ void loop(){
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveDateTime();
-      readAndSavePotentiometer();
-      // readAndSaveHumidity();
-      // readAndSaveTemperature();
+      readAndSaveSpeed();
+      readAndSaveTemperature();
+      readAndSaveHumidity();
       // printLog();
       notifyClients();
       last_time_millis = millis();
@@ -85,18 +94,27 @@ void readAndSaveDateTime(){
   times.push_back(new String(time));
 }
 
-void readAndSavePotentiometer(){
+void readAndSaveSpeed(){
   int value = analogRead(POTENTIOMETER_PIN);
-  potentiometerRawValues.push_back(value);
-  potentiometerAngleValues.push_back(mapPotentiometerValueToAngle(value));
+  speeds.push_back(mapPotentiometerValueToSpeed(value));
 }
 
 float mapPotentiometerValue(float value, float out_min, float out_max){
   return (value - POTENTIOMETER_MIN) * (out_max - out_min) / (POTENTIOMETER_MAX - POTENTIOMETER_MIN) + out_min;
 }
 
-int mapPotentiometerValueToAngle(float value){
-  return int(mapPotentiometerValue(value, ANGLE_MIN, ANGLE_MAX));
+float mapPotentiometerValueToSpeed(float value){
+  return float(mapPotentiometerValue(value, SPEED_MIN, SPEED_MAX));
+}
+
+void readAndSaveTemperature(){
+  float value = dht.readTemperature();
+  temperatures.push_back(value);
+}
+
+void readAndSaveHumidity(){
+  float value = dht.readHumidity();
+  humidities.push_back(value);
 }
 
 void beginSPIFFS() {
@@ -159,34 +177,36 @@ void notifyClients(){
   JSONVar json;
   json["date"] = date;
   json["currentTime"] = currentTime;
+  json["label"] = *times.back();
+  json["speed"] = speeds.back();
+  json["temperature"] = temperatures.back();
+  json["humidity"] = humidities.back();
 
-  JSONVar timesJsonArray;
-  int count = 0;
-  for (auto it = times.rbegin(); it != times.rend() && count < ARRAY_MAX_VALUES; ++it) {
-      timesJsonArray[count] = *(*it);
-      count++;
-  }
-  json["times"] = timesJsonArray;
+  // JSONVar timesJsonArray;
+  // int count = 0;
+  // for (auto it = times.rbegin(); it != times.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //     timesJsonArray[count] = *(*it);
+  //     count++;
+  // }
+  // json["times"] = timesJsonArray;
 
-  JSONVar rawPotentiometerJsonArray;
-  count = 0;
-  for (auto it = potentiometerRawValues.rbegin(); it != potentiometerRawValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
-    rawPotentiometerJsonArray[count] = *it;
-    count++;
-  }
-  json["potentiometerRawValues"] = rawPotentiometerJsonArray;
+  // JSONVar rawPotentiometerJsonArray;
+  // count = 0;
+  // for (auto it = potentiometerRawValues.rbegin(); it != potentiometerRawValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //   rawPotentiometerJsonArray[count] = *it;
+  //   count++;
+  // }
+  // json["potentiometerRawValues"] = rawPotentiometerJsonArray;
 
-  JSONVar anglePotentiometerJsonArray;
-  count = 0;
-  for (auto it = potentiometerAngleValues.rbegin(); it != potentiometerAngleValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
-    anglePotentiometerJsonArray[count] = *it;
-    count++;
-  }
-  json["potentiometerAngleValues"] = anglePotentiometerJsonArray;
+  // JSONVar anglePotentiometerJsonArray;
+  // count = 0;
+  // for (auto it = potentiometerAngleValues.rbegin(); it != potentiometerAngleValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //   anglePotentiometerJsonArray[count] = *it;
+  //   count++;
+  // }
+  // json["potentiometerAngleValues"] = anglePotentiometerJsonArray;
 
   String jsonString = JSON.stringify(json);
 
   ws.textAll(jsonString);
 }
-
-
