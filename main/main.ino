@@ -54,17 +54,10 @@ std::list<float> temperatures;
 
 std::list<float> humidities;
 
-<<<<<<< HEAD
 // Time, Distance, Acceleration
 int running_time = 0;
 float distance = 0.0;
 float acceleration = 0.0;
-=======
-// Time, Distance & Aceleration
-int runningTime = 0;
-float distance;
-float acceleration;
->>>>>>> c674930c0b1fdc20ce7eb7a82a2bd5cc36c4a706
 
 void setup(){
   Serial.begin(115200);
