@@ -27,6 +27,15 @@ String currentTime = "";
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
 #define ARRAY_MAX_VALUES 10
+String status = "stop";
+
+//Button & Tilting
+#define LEFT_BUTTON 21
+#define RIGHT_BUTTON 19
+// unsigned long lastTime = 0;
+unsigned long debounce_delay = 300;
+int steer = 0;
+std::list<int> steers;
 
 // Potentiometer
 #define POTENTIOMETER_PIN 34
@@ -45,10 +54,17 @@ std::list<float> temperatures;
 
 std::list<float> humidities;
 
+<<<<<<< HEAD
 // Time, Distance, Acceleration
 int running_time = 0;
 float distance = 0.0;
 float acceleration = 0.0;
+=======
+// Time, Distance & Aceleration
+int runningTime = 0;
+float distance;
+float acceleration;
+>>>>>>> c674930c0b1fdc20ce7eb7a82a2bd5cc36c4a706
 
 void setup(){
   Serial.begin(115200);
@@ -57,6 +73,7 @@ void setup(){
   beginSPIFFS();
 
   initWebSocket();
+  initButtons();
 
   // Start server on route
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -78,13 +95,32 @@ void loop(){
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       running_time++;
       readAndSaveDateTime();
-      readAndSaveSpeedTimeAcceleration();
-      readAndSaveTemperature();
-      readAndSaveHumidity();
+      if(status == "start"){
+        runningTime++;
+        readAndSaveSpeedDistanceAcceleration();
+        readAndSaveTemperature();
+        readAndSaveHumidity();
+        readAndSaveSteering();
+      }
       // printLog();
       notifyClients();
       last_time_millis = millis();
     }
+}
+
+void initButtons() {
+  pinMode(LEFT_BUTTON, INPUT_PULLUP);
+  pinMode(RIGHT_BUTTON, INPUT_PULLUP);
+}
+
+void readAndSaveSteering() {
+  if ((millis() - last_time_millis) > debounce_delay) {
+    if (digitalRead(LEFT_BUTTON) == LOW) steer--;
+    if (digitalRead(RIGHT_BUTTON) == LOW) steer++;
+    
+    last_time_millis = millis();
+  }
+  steers.push_back(steer);
 }
 
 void readAndSaveDateTime(){
@@ -102,7 +138,7 @@ void readAndSaveDateTime(){
   times.push_back(new String(time));
 }
 
-void readAndSaveSpeedTimeAcceleration(){
+void readAndSaveSpeedDistanceAcceleration(){
   int value = analogRead(POTENTIOMETER_PIN);
   float newSpeed = mapPotentiometerValueToSpeed(value);
   float lastSpeed = speeds.back();
@@ -178,15 +214,27 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    if (strcmp((char*)data, "restart") == 0) {
-      // To Do
-      notifyClients();
+    if (strcmp((char*)data, "start") == 0) {
+      Serial.println("Start");
+      status = "start";
+      // notifyClients();
+    }
+    if (strcmp((char*)data, "pause") == 0) {
+      Serial.println("Pause");
+      status = "pause";
+      // notifyClients();
+    }
+    if (strcmp((char*)data, "stop") == 0) {
+      Serial.println("Stop");
+      status = "stop";
+      // notifyClients();
     }
   }
 }
 
 void notifyClients(){
   JSONVar json;
+  json["status"] = status;
   json["date"] = date;
   json["currentTime"] = currentTime;
   json["time"] = running_time;
@@ -196,6 +244,7 @@ void notifyClients(){
   json["speed"] = speeds.back();
   json["temperature"] = temperatures.back();
   json["humidity"] = humidities.back();
+  json["tilt"] = steers.back();
 
   // JSONVar timesJsonArray;
   // int count = 0;
