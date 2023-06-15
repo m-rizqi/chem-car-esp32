@@ -1,9 +1,32 @@
+var samplingData = -1;
+
+function onSamplingChange(value){
+    switch (value) {
+      case "2":
+        samplingData = 5;
+        break;
+      case "3":
+        samplingData = 10;
+        break;
+      case "4":
+        samplingData = 15;
+        break;
+      default:
+        samplingData = -1;
+        break;
+    }
+
+    setSpeedChart(labelDatasets, speedDatasets);
+    setTemperatureChart(labelDatasets, temperatureDatasets);
+    setHumidityChart(labelDatasets, humidityDatasets);
+}
+
 function setDate(date) {
   document.getElementById("date").innerHTML = date;
 }
 
 function setCurrentTime(currentTime) {
-  document.getElementById("currentTime").innerHTML = currentTime + "WIB";
+  document.getElementById("currentTime").innerHTML = currentTime + " WIB";
 }
 
 function setTime(time) {
@@ -11,11 +34,11 @@ function setTime(time) {
 }
 
 function setDistance(distance) {
-  document.getElementById("distance").innerHTML = distance;
+  document.getElementById("distance").innerHTML = parseFloat(distance.toFixed(1));
 }
 
 function setAcceleration(acceleration) {
-  document.getElementById("acceleration").innerHTML = acceleration;
+  document.getElementById("acceleration").innerHTML = parseFloat(acceleration.toFixed(1));
 }
 
 var labelDatasets;
@@ -56,11 +79,19 @@ function setSpeedChart(labels, data) {
     });
 }
 
-function appendNewSpeed(label, data) {
+function appendNewSpeed(data) {
   setSpeedGauge(data);
   speedDatasets.push(data);
-  speedChart.data.labels.push(label);
-  speedChart.data.datasets[0].data.push(data);
+  
+  var labels = labelDatasets;
+  var datasets = speedDatasets;
+  if (samplingData != -1){
+    labels = labels.slice(-samplingData);
+    datasets = datasets.slice(-samplingData);
+  }
+  
+  speedChart.data.labels = labels;
+  speedChart.data.datasets[0].data = datasets;
   speedChart.update();
 }
 
@@ -105,11 +136,19 @@ function setTemperatureChart(labels, data) {
     });
 }
 
-function appendNewTemperature(label, data) {
+function appendNewTemperature(data) {
   setTemperature(data);
   temperatureDatasets.push(data);
-  temperatureChart.data.labels.push(label);
-  temperatureChart.data.datasets[0].data.push(data);
+
+  var labels = labelDatasets;
+  var datasets = temperatureDatasets;
+  if (samplingData != -1){
+    labels = labels.slice(-samplingData);
+    datasets = datasets.slice(-samplingData);
+  }
+
+  temperatureChart.data.labels = labels
+  temperatureChart.data.datasets[0].data = datasets;
   temperatureChart.update();
 }
 
@@ -158,11 +197,19 @@ function setHumidityChart(labels, data) {
     });
 }
 
-function appendNewHumidity(label, data) {
+function appendNewHumidity(data) {
   setHumidity(data);
   humidityDatasets.push(data);
-  humidityChart.data.labels.push(label);
-  humidityChart.data.datasets[0].data.push(data);
+
+  var labels = labelDatasets;
+  var datasets = humidityDatasets;
+  if (samplingData != -1){
+    labels = labels.slice(-samplingData);
+    datasets = datasets.slice(-samplingData);
+  }
+
+  humidityChart.data.labels = labels;
+  humidityChart.data.datasets[0].data = datasets;
   humidityChart.update();
 }
 
@@ -214,16 +261,11 @@ function setTilt(tilt) {
 }
 
 function drawCarMovements(coordinates) {
+  if (coordinates.length === 0) return;
     var canvas = document.getElementById("road-canvas");
     var context = canvas.getContext("2d");
 
-    function scaleCoordinateValue(
-    coordinate,
-    canvasWidth,
-    canvasHeight,
-    xRange,
-    yRange
-    ) {
+    function scaleCoordinateValue(coordinate, canvasWidth, canvasHeight, xRange, yRange) {
         var xScaleFactor = canvasWidth / xRange;
         var yScaleFactor = canvasHeight / yRange;
         var xScaled = coordinate[0] * xScaleFactor;
