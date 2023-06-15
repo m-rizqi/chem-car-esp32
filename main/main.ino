@@ -86,7 +86,6 @@ void setup(){
 void loop(){
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
-      running_time++;
       readAndSaveDateTime();
       if(status == "start"){
         runningTime++;
