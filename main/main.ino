@@ -1,60 +1,133 @@
+#include <Arduino.h>
+#include <list>
 #include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include "SPIFFS.h"
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <time.h>
-#include <cppQueue.h>
 #include "DHT.h"
+#include <Arduino_JSON.h>
 
-const char* ssid = "OPPO Reno5";
-const char* password = "v3qu6m3u";
+const char* ssid = "Kost Kelapa Lima";
+const char* password = "naikdaun12345";
+
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
+// Date & TIme
 WiFiUDP ntpUDP;
 NTPClient time_client(ntpUDP, "pool.ntp.org", 25200, 60000);
+std::list<String*> times;
+String date = "";
+String currentTime = "";
 
-#define	QUEUE_IMPLEMENTATION	FIFO
-#define ARRAY_MAX_VALUES 5
-size_t int_size = sizeof(int);
-size_t float_size = sizeof(float);
+// Sampling
+#define SAMPLING_PERIODE 1000
+unsigned long last_time_millis = 0;
+#define ARRAY_MAX_VALUES 10
 
-#define POTENTIOMETER_PIN 15
+// Potentiometer
+#define POTENTIOMETER_PIN 34
 #define POTENTIOMETER_MIN 0
 #define POTENTIOMETER_MAX 4095
-cppQueue potentiometer_queue(int_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
+#define SPEED_MIN 0
+#define SPEED_MAX 10 // 10 m/s
+std::list<float> speeds;
 
+// DHT
 #define DHT_PIN 4
-// #define DHT_TYPE DHT11
 #define DHT_TYPE DHT22
 DHT dht(DHT_PIN, DHT_TYPE);
 
-cppQueue humidity_queue(float_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
+std::list<float> temperatures;
 
-cppQueue temperature_queue(float_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
+std::list<float> humidities;
 
-#define ANGLE_MIN 0
-#define ANGLE_MAX 360
-
-#define SAMPLING_PERIODE 1000
-unsigned long last_time_millis = 0;
-struct Time {
-  int hour;
-  int minute;
-  int second;
-  String getFormattedTime(){
-    String hour_string = (this->hour < 10 ? "0" : "") + String(this->hour, DEC);
-    String minute_string = (this->minute < 10 ? "0" : "") + String(this->minute, DEC); 
-    String second_string = (this->second < 10 ? "0" : "") + String(this->second, DEC); 
-    String time_string = hour_string + ":" + minute_string + ":" + second_string; 
-    return time_string;
-  }
-};
-size_t time_size = sizeof(Time);
-
-cppQueue time_queue(time_size, ARRAY_MAX_VALUES, QUEUE_IMPLEMENTATION);
-
-void setup() {
+void setup(){
   Serial.begin(115200);
 
+  beginWiFi();
+  beginSPIFFS();
+
+  initWebSocket();
+
+  // Start server on route
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
+  server.serveStatic("/", SPIFFS, "/");
+  // Start server
+  server.begin();
+
+  time_client.begin();  
+  setenv("TZ", "Asia/Jakarta", 1);
+  tzset();
+}
+
+void loop(){
+  ws.cleanupClients();
+  if(millis() - last_time_millis > SAMPLING_PERIODE){
+      readAndSaveDateTime();
+      readAndSaveSpeed();
+      readAndSaveTemperature();
+      readAndSaveHumidity();
+      // printLog();
+      notifyClients();
+      last_time_millis = millis();
+    }
+}
+
+void readAndSaveDateTime(){
+  time_client.update();
+  time_t raw_time = time_client.getEpochTime();
+  struct tm *time_info;
+  time_info = localtime(&raw_time);
+  char buffer[80];
+  strftime(buffer, sizeof(buffer), "%A, %e %B %Y %H:%M:%S", time_info);
+  
+  String date_and_time = String(buffer);
+  date = date_and_time.substring(0,date_and_time.length() - 9);
+  String time = date_and_time.substring(date_and_time.length() - 8, date_and_time.length());
+  currentTime = time;
+  times.push_back(new String(time));
+}
+
+void readAndSaveSpeed(){
+  int value = analogRead(POTENTIOMETER_PIN);
+  speeds.push_back(mapPotentiometerValueToSpeed(value));
+}
+
+float mapPotentiometerValue(float value, float out_min, float out_max){
+  return (value - POTENTIOMETER_MIN) * (out_max - out_min) / (POTENTIOMETER_MAX - POTENTIOMETER_MIN) + out_min;
+}
+
+float mapPotentiometerValueToSpeed(float value){
+  return float(mapPotentiometerValue(value, SPEED_MIN, SPEED_MAX));
+}
+
+void readAndSaveTemperature(){
+  float value = dht.readTemperature();
+  temperatures.push_back(value);
+}
+
+void readAndSaveHumidity(){
+  float value = dht.readHumidity();
+  humidities.push_back(value);
+}
+
+void beginSPIFFS() {
+  if (!SPIFFS.begin()) {
+    Serial.println("An error has occurred while mounting SPIFFS");
+  }
+  Serial.println("SPIFFS mounted successfully");
+}
+
+void beginWiFi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -64,116 +137,76 @@ void setup() {
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-
-  time_client.begin();  
-  setenv("TZ", "Asia/Jakarta", 1);
-  tzset();
-
-  dht.begin();
 }
 
-void loop() {
-    if(millis() - last_time_millis > SAMPLING_PERIODE){
-      readAndSaveTime();
-      readAndSavePotentiometer();
-      readAndSaveHumidity();
-      readAndSaveTemperature();
-      printLog();
-      last_time_millis = millis();
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+             void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+    if (strcmp((char*)data, "restart") == 0) {
+      // To Do
+      notifyClients();
     }
+  }
 }
 
-void readAndSaveTime(){
-  time_client.update();
-  time_t raw_time = time_client.getEpochTime();
-  struct tm *time_info;
-  time_info = localtime(&raw_time);
-  char buffer[80];
-  strftime(buffer, sizeof(buffer), "%e %B %Y %H:%M:%S", time_info);
-  String date_and_time = String(buffer);
-  String date_string = date_and_time.substring(0,date_and_time.length() - 9);
-  String time_string = date_and_time.substring(date_and_time.length() - 8, date_and_time.length());
-  int hour = atoi(time_string.substring(0,2).c_str());
-  int minute = atoi(time_string.substring(3,5).c_str());
-  int second = atoi(time_string.substring(6,8).c_str());
-  Time t = Time{hour, minute, second};
-  if(time_queue.isFull()){
-    Time temp;
-    time_queue.pop(&temp);
-  }
-  time_queue.push(&t);
-}
+void notifyClients(){
+  JSONVar json;
+  json["date"] = date;
+  json["currentTime"] = currentTime;
+  json["label"] = *times.back();
+  json["speed"] = speeds.back();
+  json["temperature"] = temperatures.back();
+  json["humidity"] = humidities.back();
 
-void readAndSavePotentiometer(){
-  int value = analogRead(POTENTIOMETER_PIN);
-  if(potentiometer_queue.isFull()){
-    int temp;
-    potentiometer_queue.pop(&temp);
-  }
-  potentiometer_queue.push(&value);
-}
+  // JSONVar timesJsonArray;
+  // int count = 0;
+  // for (auto it = times.rbegin(); it != times.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //     timesJsonArray[count] = *(*it);
+  //     count++;
+  // }
+  // json["times"] = timesJsonArray;
 
-void readAndSaveHumidity(){
-  float value = dht.readHumidity();
-  if(humidity_queue.isFull()){
-    float temp;
-    humidity_queue.pop(&temp);
-  }
-  humidity_queue.push(&value);
-}
+  // JSONVar rawPotentiometerJsonArray;
+  // count = 0;
+  // for (auto it = potentiometerRawValues.rbegin(); it != potentiometerRawValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //   rawPotentiometerJsonArray[count] = *it;
+  //   count++;
+  // }
+  // json["potentiometerRawValues"] = rawPotentiometerJsonArray;
 
-void readAndSaveTemperature(){
-  float value = dht.readTemperature();
-  if(temperature_queue.isFull()){
-    float temp;
-    temperature_queue.pop(&temp);
-  }
-  temperature_queue.push(&value);
-}
+  // JSONVar anglePotentiometerJsonArray;
+  // count = 0;
+  // for (auto it = potentiometerAngleValues.rbegin(); it != potentiometerAngleValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
+  //   anglePotentiometerJsonArray[count] = *it;
+  //   count++;
+  // }
+  // json["potentiometerAngleValues"] = anglePotentiometerJsonArray;
 
-void printLog(){
-  Time time_temp;
-  Serial.print("Time: [");
-  for(int i = 0; i < time_queue.getCount(); i++){
-    time_queue.peekIdx(&time_temp, i);
-    Serial.print(time_temp.getFormattedTime());
-    Serial.print(",");
-  }
-  Serial.println("]");
-  
-  int int_temp;
+  String jsonString = JSON.stringify(json);
 
-  Serial.print("Potentiometer: [");
-  for(int i = 0; i < potentiometer_queue.getCount(); i++){
-    potentiometer_queue.peekIdx(&int_temp, i);
-    Serial.print(int_temp);
-    Serial.print(",");
-  }
-  Serial.println("]");
-
-  float f_temp;
-  Serial.print("Humidity: [");
-  for(int i = 0; i < humidity_queue.getCount(); i++){
-    humidity_queue.peekIdx(&f_temp, i);
-    Serial.print(f_temp);
-    Serial.print(",");
-  }
-  Serial.println("]");
-
-  Serial.print("Temperature: [");
-  for(int i = 0; i < temperature_queue.getCount(); i++){
-    temperature_queue.peekIdx(&f_temp, i);
-    Serial.print(f_temp);
-    Serial.print(",");
-  }
-  Serial.println("]");
-  Serial.println("");
-}
-
-float mapPotentiometerValue(float value, float out_min, float out_max){
-  return (value - POTENTIOMETER_MIN) * (out_max - out_min) / (POTENTIOMETER_MAX - POTENTIOMETER_MIN) + out_min;
-}
-
-float mapPotentiometerValueToAngle(float value){
-  return mapPotentiometerValue(value, ANGLE_MIN, ANGLE_MAX);
+  ws.textAll(jsonString);
 }
