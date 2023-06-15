@@ -55,7 +55,7 @@ std::list<float> temperatures;
 std::list<float> humidities;
 
 // Time, Distance, Acceleration
-int running_time = 0;
+int runningTime = 0;
 float distance = 0.0;
 float acceleration = 0.0;
 
@@ -230,7 +230,7 @@ void notifyClients(){
   json["status"] = status;
   json["date"] = date;
   json["currentTime"] = currentTime;
-  json["time"] = running_time;
+  json["time"] = runningTime;
   json["distance"] = distance;
   json["acceleration"] = acceleration;
   json["label"] = *times.back();
