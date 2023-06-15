@@ -10,8 +10,8 @@
 #include "DHT.h"
 #include <Arduino_JSON.h>
 
-const char* ssid = "Kost Kelapa Lima";
-const char* password = "naikdaun12345";
+const char* ssid = "OPPO Reno5";
+const char* password = "v3qu6m3u";
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
