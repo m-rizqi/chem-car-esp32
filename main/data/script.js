@@ -1,5 +1,57 @@
-var samplingData = -1;
+var recordStatus = "stop";
+function onStartClick(){
+  switch(recordStatus){
+    case "start":
+      {
+        websocket.send("pause");
+      }
+      break;
+      case "pause":
+      {
+        websocket.send("start");
+      }
+      break;
+    case "stop":
+      {
+        websocket.send("start");
+      }
+      break;
+    default:
+      break;
+  }
+  startButton.innerHTML = buttonText;
+}
 
+function onStopClick(){
+  websocket.send("stop");
+}
+
+function setStatus(value){
+  recordStatus = value;
+  var buttonText = "Start";
+  switch(recordStatus){
+    case "start":
+      {
+        buttonText = "Pause";
+      }
+      break;
+      case "pause":
+      {
+        buttonText = "Start";
+      }
+      break;
+    case "stop":
+      {
+        buttonText = "Start";
+      }
+      break;
+    default:
+      break;
+  }
+  document.getElementById("start-button").innerHTML = buttonText;
+}
+
+var samplingData = -1;
 function onSamplingChange(value){
     switch (value) {
       case "2":

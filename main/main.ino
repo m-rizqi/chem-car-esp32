@@ -27,6 +27,7 @@ String currentTime = "";
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
 #define ARRAY_MAX_VALUES 10
+String status = "stop";
 
 // Potentiometer
 #define POTENTIOMETER_PIN 34
@@ -44,6 +45,11 @@ DHT dht(DHT_PIN, DHT_TYPE);
 std::list<float> temperatures;
 
 std::list<float> humidities;
+
+// Time, Distance & Aceleration
+int runningTime = 0;
+float distance;
+float acceleration;
 
 void setup(){
   Serial.begin(115200);
@@ -70,9 +76,12 @@ void loop(){
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveDateTime();
-      readAndSaveSpeed();
-      readAndSaveTemperature();
-      readAndSaveHumidity();
+      if(status == "start"){
+        runningTime++;
+        readAndSaveSpeedDistanceAcceleration();
+        readAndSaveTemperature();
+        readAndSaveHumidity();
+      }
       // printLog();
       notifyClients();
       last_time_millis = millis();
@@ -94,9 +103,13 @@ void readAndSaveDateTime(){
   times.push_back(new String(time));
 }
 
-void readAndSaveSpeed(){
+void readAndSaveSpeedDistanceAcceleration(){
   int value = analogRead(POTENTIOMETER_PIN);
-  speeds.push_back(mapPotentiometerValueToSpeed(value));
+  float newSpeed = mapPotentiometerValueToSpeed(value);
+  float lastSpeed = speeds.back();
+  acceleration = (newSpeed - lastSpeed) / 1;
+  distance += newSpeed * 1;
+  speeds.push_back(newSpeed);
 }
 
 float mapPotentiometerValue(float value, float out_min, float out_max){
@@ -166,17 +179,32 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    if (strcmp((char*)data, "restart") == 0) {
-      // To Do
-      notifyClients();
+    if (strcmp((char*)data, "start") == 0) {
+      Serial.println("Start");
+      status = "start";
+      // notifyClients();
+    }
+    if (strcmp((char*)data, "pause") == 0) {
+      Serial.println("Pause");
+      status = "pause";
+      // notifyClients();
+    }
+    if (strcmp((char*)data, "stop") == 0) {
+      Serial.println("Stop");
+      status = "stop";
+      // notifyClients();
     }
   }
 }
 
 void notifyClients(){
   JSONVar json;
+  json["status"] = status;
   json["date"] = date;
   json["currentTime"] = currentTime;
+  json["time"] = runningTime;
+  json["distance"] = distance;
+  json["acceleration"] = acceleration;
   json["label"] = *times.back();
   json["speed"] = speeds.back();
   json["temperature"] = temperatures.back();
