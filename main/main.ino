@@ -45,6 +45,11 @@ std::list<float> temperatures;
 
 std::list<float> humidities;
 
+// Time, Distance, Acceleration
+int running_time = 0;
+float distance = 0.0;
+float acceleration = 0.0;
+
 void setup(){
   Serial.begin(115200);
 
@@ -64,13 +69,16 @@ void setup(){
   time_client.begin();  
   setenv("TZ", "Asia/Jakarta", 1);
   tzset();
+
+  dht.begin();
 }
 
 void loop(){
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
+      running_time++;
       readAndSaveDateTime();
-      readAndSaveSpeed();
+      readAndSaveSpeedTimeAcceleration();
       readAndSaveTemperature();
       readAndSaveHumidity();
       // printLog();
@@ -94,9 +102,13 @@ void readAndSaveDateTime(){
   times.push_back(new String(time));
 }
 
-void readAndSaveSpeed(){
+void readAndSaveSpeedTimeAcceleration(){
   int value = analogRead(POTENTIOMETER_PIN);
-  speeds.push_back(mapPotentiometerValueToSpeed(value));
+  float newSpeed = mapPotentiometerValueToSpeed(value);
+  float lastSpeed = speeds.back();
+  acceleration = (newSpeed - lastSpeed) / 1;
+  distance += (newSpeed * 1);
+  speeds.push_back(newSpeed);
 }
 
 float mapPotentiometerValue(float value, float out_min, float out_max){
@@ -177,6 +189,9 @@ void notifyClients(){
   JSONVar json;
   json["date"] = date;
   json["currentTime"] = currentTime;
+  json["time"] = running_time;
+  json["distance"] = distance;
+  json["acceleration"] = acceleration;
   json["label"] = *times.back();
   json["speed"] = speeds.back();
   json["temperature"] = temperatures.back();
