@@ -90,6 +90,7 @@ void loop(){
         readAndSaveSpeedDistanceAcceleration();
         readAndSaveTemperature();
         readAndSaveHumidity();
+        readAndSaveSteering();
       }
       // printLog();
       notifyClients();
