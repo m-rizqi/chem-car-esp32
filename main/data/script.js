@@ -13,13 +13,17 @@ function onStartClick(){
       break;
     case "stop":
       {
-        websocket.send("start");
+        websocket.send("restart");
+        roadContext.clearRect(0, 0, canvas.width, canvas.height);
+        setLabels([]);
+        setSpeedChart(labelDatasets, []);
+        setTemperatureChart(labelDatasets, []);
+        setHumidityChart(labelDatasets, []);
       }
       break;
     default:
       break;
   }
-  startButton.innerHTML = buttonText;
 }
 
 function onStopClick(){
@@ -42,7 +46,7 @@ function setStatus(value){
       break;
     case "stop":
       {
-        buttonText = "Start";
+        buttonText = "Restart";
       }
       break;
     default:
@@ -274,16 +278,18 @@ function setTilt(tilt) {
 
     if (tilt < 0) {
         tiltDirection.innerHTML = "Left";
+        tiltDirection.style.color = "red";
     } else if (tilt === 0) {
         tiltDirection.innerHTML = "Straight";
         tiltDirection.style.color = "green";
     } else {
         tiltDirection.innerHTML = "Right";
+        tiltDirection.style.color = "red";
     }
 
     cancelAnimationFrame(animationFrame); // Cancel any previous animation frame
 
-    var duration = 1000; // Animation duration in milliseconds
+    var duration = 500; // Animation duration in milliseconds
     var startAngle = angle;
     var changeAngle = tilt - startAngle;
     var startTime = null;
@@ -312,16 +318,18 @@ function setTilt(tilt) {
     animationFrame = requestAnimationFrame(animate);
 }
 
+var canvas = document.getElementById("road-canvas");
+var roadContext = canvas.getContext("2d");
 function drawCarMovements(coordinates) {
   if (coordinates.length === 0) return;
-    var canvas = document.getElementById("road-canvas");
-    var context = canvas.getContext("2d");
+    canvas = document.getElementById("road-canvas");
+    roadContext = canvas.getContext("2d");
 
     function scaleCoordinateValue(coordinate, canvasWidth, canvasHeight, xRange, yRange) {
         var xScaleFactor = canvasWidth / xRange;
         var yScaleFactor = canvasHeight / yRange;
-        var xScaled = coordinate[0] * xScaleFactor;
-        var yScaled = coordinate[1] * yScaleFactor + (yRange / 2) * yScaleFactor;
+        var xScaled = coordinate.x * xScaleFactor;
+        var yScaled = coordinate.y * yScaleFactor;
         return [xScaled, yScaled];
     }
 
@@ -335,15 +343,10 @@ function drawCarMovements(coordinates) {
 
     var canvasWidth = canvas.width;
     var canvasHeight = canvas.height;
-    var xMax = canvasWidth;
-    var yMax = canvasHeight;
-    var xRange = 12;
-    var yCoordMax = Math.max(...coordinates.map((coord) => coord[1]));
-    var yCoordMin = Math.min(...coordinates.map((coord) => coord[1]));
-    // var yRange = yCoordMax - yCoordMin;
+    var xRange = 13;
     var yRange = 8;
 
-    context.beginPath();
+    roadContext.beginPath();
     var [x, y] = scaleCoordinateValue(
         coordinates[0],
         canvasWidth,
@@ -351,21 +354,15 @@ function drawCarMovements(coordinates) {
         xRange,
         yRange
     );
-    context.moveTo(x, y);
+    roadContext.moveTo(x, y);
 
     for (var i = 1; i < coordinates.length; i++) {
-        [x, y] = scaleCoordinateValue(
-        coordinates[i],
-        canvasWidth,
-        canvasHeight,
-        xRange,
-        yRange
-        );
-        context.lineTo(x, y);
+        [x, y] = scaleCoordinateValue(coordinates[i], canvasWidth,canvasHeight, xRange, yRange);
+        roadContext.lineTo(x, y);
         setCarPosition(x, y, canvasWidth, canvasHeight);
     }
 
-    context.strokeStyle = "red";
-    context.lineWidth = 2;
-    context.stroke();
+    roadContext.strokeStyle = "red";
+    roadContext.lineWidth = 2;
+    roadContext.stroke();
 }
