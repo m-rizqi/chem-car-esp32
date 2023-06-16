@@ -1,0 +1,283 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: #f5f5f5;
+}
+.logo {
+  background-color: #e5e3ff;
+  font-weight: 600;
+  color: #6755e7;
+}
+#date {
+  color: #8f8f8f;
+  font-weight: 500;
+}
+.time {
+  background-image: url("bg-green.svg");
+  color: white;
+  background-size: cover;
+  font-weight: 600;
+}
+.main-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(33.33%, 1fr));
+}
+.distance {
+  background-image: url("bg-purple.svg");
+  color: white;
+  background-size: cover;
+}
+.acceleration {
+  background-image: url("bg-orange.svg");
+  color: white;
+  background-size: cover;
+}
+.gauge-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+#gauge {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  background: #fff;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#major-ticks {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+}
+#major-ticks span {
+  position: absolute;
+  font-size: 0.7em;
+  color: #afafaf;
+}
+#major-ticks span:nth-child(1) {
+  top: 70%;
+  transform: translate(110%);
+}
+#major-ticks span:nth-child(2) {
+  top: 35%;
+  transform: translateY(-20%);
+}
+#major-ticks span:nth-child(3) {
+  left: 50%;
+  transform: translateX(-50%);
+}
+#major-ticks span:nth-child(4) {
+  top: 35%;
+  right: 5px;
+  transform: translateX(30%);
+}
+#major-ticks span:nth-child(5) {
+  top: 70%;
+  right: 5px;
+}
+#minor-ticks {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#minor-ticks span {
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  border-top: 1px solid #afafaf;
+  transform: rotate(calc((var(--i) - 1) * 9 * 1deg));
+}
+#minor-ticks::after {
+  content: "";
+  position: absolute;
+  width: 93%;
+  height: 93%;
+  background: #fff;
+  border-radius: 50%;
+}
+#minor-ticks-bottom-mask {
+  position: absolute;
+  width: 80%;
+  height: 30%;
+  bottom: 0;
+  background: #fff;
+}
+#bottom-circle {
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  background: linear-gradient(#efefef, #ffffff);
+  border-radius: 50%;
+  box-shadow: inset 0 5px 5px #e7e7e7;
+}
+svg {
+  position: absolute;
+}
+svg path {
+  transition: 1s;
+}
+#center-circle {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  background: linear-gradient(180deg, #ffffff 0%, #e7ecf1 100%);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.1);
+}
+#center-circle::before {
+  content: "";
+  position: absolute;
+  width: 145px;
+  height: 145px;
+  background: linear-gradient(0deg, #ffffff 0%, #e7ecf1 100%);
+  border-radius: 50%;
+}
+#name {
+  position: absolute;
+  font-size: 1em;
+  color: #000;
+  top: 110px;
+}
+#center-circle img {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  bottom: 20px;
+}
+#speed {
+  position: absolute;
+  font-size: 3em;
+  color: #000;
+  font-weight: 600;
+}
+#range {
+  position: absolute;
+  width: 80%;
+  bottom: 10px;
+}
+.temperature-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+#temperature {
+  position: relative;
+  height: 450px;
+  width: 100px;
+  scale: 0.7;
+}
+#temperature-bar {
+  z-index: 1;
+  height: 350px;
+  width: 40px;
+  background-color: #f5f5f5;
+  border-radius: 25px 25px 0 0;
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#temperature-circle {
+  height: 100px;
+  width: 100px;
+  background-color: #f5f5f5;
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+}
+#temperature-circle::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #f87a53;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+#temperature-bar::after {
+  content: "";
+  display: block;
+  height: 360px;
+  width: 20px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -22px;
+  border-radius: 10px 10px 0 0;
+  background-color: #f87a53;
+  animation: temperature-anim 1s ease-in;
+}
+#humidity-container {
+  width: 100%;
+}
+#canvas-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+}
+.steer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#tilt-direction {
+  font-size: 2em;
+  font-weight: 500;
+  margin-top: -8px;
+  color: red;
+}
+#car {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+}
+#road-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes temperature-anim {
+  0% {
+    height: 5%;
+  }
+  100% {
+    height: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .container-chart {
+    width: 100vh;
+  }
+  #humidity-container {
+    width: 60%;
+  }
+}
+
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1;
+}
