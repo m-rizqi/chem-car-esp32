@@ -8,6 +8,7 @@
 #include <NTPClient.h>
 #include <time.h>
 #include "DHT.h"
+#include <cmath>
 #include <Arduino_JSON.h>
 
 const char* ssid = "OPPO Reno5";
@@ -59,6 +60,13 @@ int runningTime = 0;
 float distance = 0.0;
 float acceleration = 0.0;
 
+// Car Movements
+struct Coordinate {
+    int x;
+    int y;
+};
+std::list<Coordinate> carMovements;
+
 void setup(){
   Serial.begin(115200);
 
@@ -81,6 +89,8 @@ void setup(){
   tzset();
 
   dht.begin();
+
+  carMovements.push_back({0,4});
 }
 
 void loop(){
@@ -93,10 +103,15 @@ void loop(){
         readAndSaveTemperature();
         readAndSaveHumidity();
         readAndSaveSteering();
+        saveCarMovements();
       }
       // printLog();
       notifyClients();
       last_time_millis = millis();
+
+      if (distance > 12.0){
+        status = "stop";
+      }
     }
 }
 
@@ -106,13 +121,43 @@ void initButtons() {
 }
 
 void readAndSaveSteering() {
-  // if ((millis() - last_time_millis) > debounce_delay) {
-    if (digitalRead(LEFT_BUTTON) == LOW) steer--;
-    if (digitalRead(RIGHT_BUTTON) == LOW) steer++;
+  if ((millis() - last_time_millis) > debounce_delay) {
+    if (digitalRead(LEFT_BUTTON) == LOW) {
+      steer -=5;
+      steer = max(-90, steer);
+    }
+    if (digitalRead(RIGHT_BUTTON) == LOW) {
+      steer +=5;
+      steer = min(90, steer);
+    }
     
-  //   last_time_millis = millis();
-  // }
+    last_time_millis = millis();
+  }
   steers.push_back(steer);
+}
+
+float mapAngleToRange(int angle) {
+  // Convert the angle from the range -90 to 90 to the range 0 to 180
+  int mappedAngle = angle + 90;
+
+  // Map the angle from the range 0 to 180 to the range 0 to 8
+  float mappedValue = (float)mappedAngle / 180.0 * 8.0;
+
+  // Round the mapped value to the nearest integer
+  int mappedIntValue = round(mappedValue);
+
+  // Ensure the mapped value is within the range 0 to 8
+  float clampedValue = min(max(mappedIntValue, 0), 8);
+
+  return clampedValue;
+}
+
+void saveCarMovements(){
+  Coordinate lastCoordinate = carMovements.back();
+  float angle = steers.back();
+  float newX = distance;
+  float newY = mapAngleToRange(angle);
+  carMovements.push_back({newX, newY});
 }
 
 void readAndSaveDateTime(){
@@ -209,17 +254,26 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     if (strcmp((char*)data, "start") == 0) {
       Serial.println("Start");
       status = "start";
-      // notifyClients();
     }
     if (strcmp((char*)data, "pause") == 0) {
       Serial.println("Pause");
       status = "pause";
-      // notifyClients();
     }
     if (strcmp((char*)data, "stop") == 0) {
       Serial.println("Stop");
       status = "stop";
-      // notifyClients();
+    }
+    if (strcmp((char*)data, "restart") == 0) {
+      Serial.println("Restart");
+      runningTime = 0;
+      distance = 0;
+      acceleration = 0;
+      times.clear();
+      speeds.clear();
+      temperatures.clear();
+      humidities.clear();
+      steers.clear();
+      status = "start";
     }
   }
 }
@@ -246,13 +300,16 @@ void notifyClients(){
   // }
   // json["times"] = timesJsonArray;
 
-  // JSONVar rawPotentiometerJsonArray;
-  // count = 0;
-  // for (auto it = potentiometerRawValues.rbegin(); it != potentiometerRawValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
-  //   rawPotentiometerJsonArray[count] = *it;
-  //   count++;
-  // }
-  // json["potentiometerRawValues"] = rawPotentiometerJsonArray;
+  JSONVar carMovementsJsonArray;
+  int idx = 0;
+  for (auto it = carMovements.begin(); it != carMovements.end(); ++it) {
+    JSONVar coordinateObj;
+    coordinateObj["x"] = it->x;
+    coordinateObj["y"] = it->y;
+    carMovementsJsonArray[idx] = coordinateObj;
+    idx++;
+  }
+  json["carMovements"] = carMovementsJsonArray;
 
   // JSONVar anglePotentiometerJsonArray;
   // count = 0;
