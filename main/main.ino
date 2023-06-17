@@ -10,9 +10,16 @@
 #include "DHT.h"
 #include <cmath>
 #include <Arduino_JSON.h>
+#include <PubSubClient.h>
 
 const char* ssid = "OPPO Reno5";
 const char* password = "v3qu6m3u";
+
+//ip address lokal host laptop
+const char* mqtt_server = "192.168.35.72";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -73,6 +80,8 @@ void setup(){
   beginWiFi();
   beginSPIFFS();
 
+  client.setServer(mqtt_server, 1883);
+
   initWebSocket();
   initButtons();
 
@@ -94,6 +103,10 @@ void setup(){
 }
 
 void loop(){
+  if (!client.connected()) {
+    mqttconnect();
+  }
+  client.loop();
   ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveDateTime();
@@ -106,18 +119,66 @@ void loop(){
         saveCarMovements();
       }
       // printLog();
+      sendMQTT();
       notifyClients();
       last_time_millis = millis();
-
-      if (distance > 12.0){
-        status = "stop";
-      }
     }
 }
 
 void initButtons() {
   pinMode(LEFT_BUTTON, INPUT_PULLUP);
   pinMode(RIGHT_BUTTON, INPUT_PULLUP);
+}
+
+void mqttconnect() {
+  /* Loop until reconnected */
+  while (!client.connected()) {
+    Serial.print("MQTT connecting ...");
+    String clientId = "ESP32Client";
+    if (client.connect(clientId.c_str())) {
+      Serial.println(" Connected");
+    } else {
+      Serial.print("failed, status code =");
+      Serial.print(client.state());
+      Serial.println("try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void sendMQTT(){
+  char msg[20];
+
+  char *temp = &status[0];
+  client.publish("status", temp);
+  
+  temp = &date[0];
+  client.publish("date", temp);
+
+  temp = &currentTime[0];
+  client.publish("currentTime", temp);
+  
+  snprintf(msg, 20, "%d", runningTime);
+  client.publish("time", msg);
+
+  snprintf(msg, 20, "%f", distance);
+  client.publish("distance", msg);
+
+  snprintf(msg, 20, "%f", acceleration);
+  client.publish("acceleration", msg);
+
+  snprintf(msg, 20, "%f", speeds.back());
+  client.publish("speed", msg);
+
+  snprintf(msg, 20, "%f", temperatures.back());
+  client.publish("temperature", msg);
+
+  snprintf(msg, 20, "%f", humidities.back());
+  client.publish("humidity", msg);
+
+  snprintf(msg, 20, "%d", steers.back());
+  client.publish("tilt", msg);
+  
 }
 
 void readAndSaveSteering() {
