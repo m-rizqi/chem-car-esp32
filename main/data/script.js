@@ -322,8 +322,6 @@ var canvas = document.getElementById("road-canvas");
 var roadContext = canvas.getContext("2d");
 function drawCarMovements(coordinates) {
   if (coordinates.length === 0) return;
-    canvas = document.getElementById("road-canvas");
-    roadContext = canvas.getContext("2d");
 
     function scaleCoordinateValue(coordinate, canvasWidth, canvasHeight, xRange, yRange) {
         var xScaleFactor = canvasWidth / xRange;
