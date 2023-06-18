@@ -12,11 +12,12 @@
 #include <Arduino_JSON.h>
 #include <PubSubClient.h>
 
-const char* ssid = "OPPO Reno5";
-const char* password = "v3qu6m3u";
+// Network Credential
+const char* ssid = "YOUR NETWORK SSID";
+const char* password = "YOUR NETWORK PASSWORD";
 
 //ip address lokal host laptop
-const char* mqtt_server = "192.168.35.72";
+const char* mqtt_server = "YOUR COMPUTER IP";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -34,13 +35,11 @@ String currentTime = "";
 // Sampling
 #define SAMPLING_PERIODE 1000
 unsigned long last_time_millis = 0;
-#define ARRAY_MAX_VALUES 10
 String status = "stop";
 
 //Button & Tilting
 #define LEFT_BUTTON 21
 #define RIGHT_BUTTON 19
-// unsigned long lastTime = 0;
 unsigned long debounce_delay = 300;
 int steer = 0;
 std::list<int> steers;
@@ -53,13 +52,11 @@ std::list<int> steers;
 #define SPEED_MAX 10 // 10 m/s
 std::list<float> speeds;
 
-// DHT
+// DHT, Temperature, Humidity
 #define DHT_PIN 4
 #define DHT_TYPE DHT22
 DHT dht(DHT_PIN, DHT_TYPE);
-
 std::list<float> temperatures;
-
 std::list<float> humidities;
 
 // Time, Distance, Acceleration
@@ -83,7 +80,6 @@ void setup(){
   client.setServer(mqtt_server, 1883);
 
   initWebSocket();
-  initButtons();
 
   // Start server on route
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -98,7 +94,7 @@ void setup(){
   tzset();
 
   dht.begin();
-
+  initButtons();
   carMovements.push_back({0,4});
 }
 
@@ -107,7 +103,6 @@ void loop(){
     mqttconnect();
   }
   client.loop();
-  ws.cleanupClients();
   if(millis() - last_time_millis > SAMPLING_PERIODE){
       readAndSaveDateTime();
       if(status == "start"){
@@ -118,7 +113,6 @@ void loop(){
         readAndSaveSteering();
         saveCarMovements();
       }
-      // printLog();
       sendMQTT();
       notifyClients();
       last_time_millis = millis();
@@ -197,6 +191,14 @@ void readAndSaveSteering() {
   steers.push_back(steer);
 }
 
+void saveCarMovements(){
+  Coordinate lastCoordinate = carMovements.back();
+  float angle = steers.back();
+  float newX = distance;
+  float newY = mapAngleToRange(angle);
+  carMovements.push_back({newX, newY});
+}
+
 float mapAngleToRange(int angle) {
   // Convert the angle from the range -90 to 90 to the range 0 to 180
   int mappedAngle = angle + 90;
@@ -211,14 +213,6 @@ float mapAngleToRange(int angle) {
   float clampedValue = min(max(mappedIntValue, 0), 8);
 
   return clampedValue;
-}
-
-void saveCarMovements(){
-  Coordinate lastCoordinate = carMovements.back();
-  float angle = steers.back();
-  float newX = distance;
-  float newY = mapAngleToRange(angle);
-  carMovements.push_back({newX, newY});
 }
 
 void readAndSaveDateTime(){
@@ -353,14 +347,6 @@ void notifyClients(){
   json["humidity"] = humidities.back();
   json["tilt"] = steers.back();
 
-  // JSONVar timesJsonArray;
-  // int count = 0;
-  // for (auto it = times.rbegin(); it != times.rend() && count < ARRAY_MAX_VALUES; ++it) {
-  //     timesJsonArray[count] = *(*it);
-  //     count++;
-  // }
-  // json["times"] = timesJsonArray;
-
   JSONVar carMovementsJsonArray;
   int idx = 0;
   for (auto it = carMovements.begin(); it != carMovements.end(); ++it) {
@@ -371,14 +357,6 @@ void notifyClients(){
     idx++;
   }
   json["carMovements"] = carMovementsJsonArray;
-
-  // JSONVar anglePotentiometerJsonArray;
-  // count = 0;
-  // for (auto it = potentiometerAngleValues.rbegin(); it != potentiometerAngleValues.rend() && count < ARRAY_MAX_VALUES; ++it) {
-  //   anglePotentiometerJsonArray[count] = *it;
-  //   count++;
-  // }
-  // json["potentiometerAngleValues"] = anglePotentiometerJsonArray;
 
   String jsonString = JSON.stringify(json);
 

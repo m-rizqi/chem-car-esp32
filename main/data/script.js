@@ -322,8 +322,6 @@ var canvas = document.getElementById("road-canvas");
 var roadContext = canvas.getContext("2d");
 function drawCarMovements(coordinates) {
   if (coordinates.length === 0) return;
-    canvas = document.getElementById("road-canvas");
-    roadContext = canvas.getContext("2d");
 
     function scaleCoordinateValue(coordinate, canvasWidth, canvasHeight, xRange, yRange) {
         var xScaleFactor = canvasWidth / xRange;
@@ -335,8 +333,8 @@ function drawCarMovements(coordinates) {
 
     function setCarPosition(xScaled, yScaled, canvasWidth, canvasHeight) {
         const carElement = document.getElementById("car");
-        var topVal = (yScaled / canvasHeight) * 100;
-        var leftVal = (xScaled / canvasWidth) * 100;
+        var topVal = Math.min((yScaled / canvasHeight) * 100, 100);
+        var leftVal = Math.min((xScaled / canvasWidth) * 100, 100);
         carElement.style.top = topVal + "%";
         carElement.style.left = leftVal + "%";
     }
